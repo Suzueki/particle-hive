@@ -58,7 +58,7 @@ class SimulationStatisticsWindow(
                 Text("Simulation speed: ${simsPs.use().toString(2)} sims/s") {}
                 Subcategory("Wall Collisions") {
                     Text("Collisions: ${wallCollisionCount.use()}") {}
-                    Text("Rate: ${wallCollisionRate.use().toString(2)} collisions/s") {}
+                    Text("Rate: ${wallCollisionRate.use().toString(2)} collisions/sim s") {}
                     Button(if (isMeasuringWallCollisions.use()) "Stop" else "Start") {
                         modifier.onClick { viewModel.toggleWallCollisionMeasurement() }
                     }

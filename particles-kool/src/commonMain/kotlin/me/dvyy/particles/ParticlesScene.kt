@@ -138,6 +138,10 @@ class ParticlesScene(
         }
         onUpdate {
             iterations++
+            val activePassCount = fieldsPasses.count { (halfStep, fullStep) ->
+                halfStep.isEnabled && fullStep.isEnabled
+            }
+            viewModel.recordWallCollisionSimulationTime(Time.deltaT.toDouble(), activePassCount)
 
             // Unmark config repo as dirty in one frame, allows compute shaders to read values
             if (clearNextFrame) {

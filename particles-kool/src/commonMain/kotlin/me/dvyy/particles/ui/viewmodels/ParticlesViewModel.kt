@@ -9,7 +9,6 @@ import de.fabmax.kool.pipeline.SamplerSettings
 import de.fabmax.kool.pipeline.Texture2d
 import de.fabmax.kool.util.Float32Buffer
 import de.fabmax.kool.util.Int32Buffer
-import de.fabmax.kool.util.Time
 import de.fabmax.kool.util.launchOnMainThread
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.deprecated.openFileSaver
@@ -49,7 +48,7 @@ class ParticlesViewModel(
     val isMeasuringWallCollisions = MutableStateFlow(false)
     val wallCollisionCount = MutableStateFlow(0)
     val wallCollisionRate = MutableStateFlow(0.0)
-    private var wallCollisionMeasurementStart = 0.0
+    private var wallCollisionElapsedSimulationSeconds = 0.0
     val uiState: MutableStateValue<List<UiConfigurable>> = configRepo.config.map { it.simulation }
         .distinctUntilChanged()
         .map { state ->
@@ -111,9 +110,18 @@ class ParticlesViewModel(
         val result = Int32Buffer(1)
         buffers.wallCollisionCountBuffer.downloadData(result)
         val collisions = result[0]
-        val elapsedSeconds = (Time.gameTime.toDouble() - wallCollisionMeasurementStart).coerceAtLeast(0.0)
         wallCollisionCount.update { collisions }
-        wallCollisionRate.update { if (elapsedSeconds > 0.0) collisions / elapsedSeconds else 0.0 }
+        wallCollisionRate.update {
+            if (wallCollisionElapsedSimulationSeconds > 0.0)
+                collisions / wallCollisionElapsedSimulationSeconds
+            else 0.0
+        }
+    }
+
+    fun recordWallCollisionSimulationTime(frameDeltaSeconds: Double, activePassCount: Int) {
+        if (!isMeasuringWallCollisions.value || activePassCount <= 0) return
+        val dT = configRepo.config.value.simulation.dT
+        wallCollisionElapsedSimulationSeconds += frameDeltaSeconds * activePassCount * dT
     }
 
     fun toggleWallCollisionMeasurement() = scope.launch {
@@ -126,7 +134,7 @@ class ParticlesViewModel(
             buffers.wallContactStatesBuffer.uploadData(Int32Buffer(buffers.count))
             wallCollisionCount.update { 0 }
             wallCollisionRate.update { 0.0 }
-            wallCollisionMeasurementStart = Time.gameTime.toDouble()
+            wallCollisionElapsedSimulationSeconds = 0.0
             buffers.countWallCollisions = true
             isMeasuringWallCollisions.update { true }
         }
