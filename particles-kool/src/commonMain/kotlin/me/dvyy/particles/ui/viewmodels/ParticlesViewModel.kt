@@ -9,6 +9,7 @@ import de.fabmax.kool.pipeline.SamplerSettings
 import de.fabmax.kool.pipeline.Texture2d
 import de.fabmax.kool.util.Float32Buffer
 import de.fabmax.kool.util.Int32Buffer
+import de.fabmax.kool.util.Time
 import de.fabmax.kool.util.launchOnMainThread
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.deprecated.openFileSaver
@@ -45,6 +46,10 @@ class ParticlesViewModel(
     private val meanSquareData: MeanSquareVelocities,
 ) {
     val passesPerFrame = MutableStateFlow(1)
+    val isMeasuringWallCollisions = MutableStateFlow(false)
+    val wallCollisionCount = MutableStateFlow(0)
+    val wallCollisionRate = MutableStateFlow(0.0)
+    private var wallCollisionMeasurementStart = 0.0
     val uiState: MutableStateValue<List<UiConfigurable>> = configRepo.config.map { it.simulation }
         .distinctUntilChanged()
         .map { state ->
@@ -100,6 +105,31 @@ class ParticlesViewModel(
         val msqV = result[0] / buffers.count
         msqvOverTime.pushNewValueRight(msqV)
         meanSquareVelocity.update { msqV }
+    }
+
+    suspend fun refreshWallCollisionMeasurement() {
+        val result = Int32Buffer(1)
+        buffers.wallCollisionCountBuffer.downloadData(result)
+        val collisions = result[0]
+        val elapsedSeconds = (Time.gameTime.toDouble() - wallCollisionMeasurementStart).coerceAtLeast(0.0)
+        wallCollisionCount.update { collisions }
+        wallCollisionRate.update { if (elapsedSeconds > 0.0) collisions / elapsedSeconds else 0.0 }
+    }
+
+    fun toggleWallCollisionMeasurement() = scope.launch {
+        if (isMeasuringWallCollisions.value) {
+            buffers.countWallCollisions = false
+            isMeasuringWallCollisions.update { false }
+            refreshWallCollisionMeasurement()
+        } else {
+            buffers.wallCollisionCountBuffer.uploadData(Int32Buffer(1))
+            buffers.wallContactStatesBuffer.uploadData(Int32Buffer(buffers.count))
+            wallCollisionCount.update { 0 }
+            wallCollisionRate.update { 0.0 }
+            wallCollisionMeasurementStart = Time.gameTime.toDouble()
+            buffers.countWallCollisions = true
+            isMeasuringWallCollisions.update { true }
+        }
     }
 
     fun updateState(simulation: Simulation.() -> Simulation) = scope.launch {

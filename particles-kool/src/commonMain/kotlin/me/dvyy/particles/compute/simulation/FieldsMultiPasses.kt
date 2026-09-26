@@ -31,6 +31,8 @@ class FieldsMultiPasses(
         halfStep.velocities = buffers.velocitiesBuffer
         halfStep.forces = buffers.forcesBuffer
         halfStep.boxMax = configRepo.boxSize
+        halfStep.wallCollisionCount = buffers.wallCollisionCountBuffer
+        halfStep.wallContactStates = buffers.wallContactStatesBuffer
     }
 
     fun addTo(
@@ -45,6 +47,7 @@ class FieldsMultiPasses(
             repeat(config.simulation.passesPerFrame) { passIndex ->
                 val halfStep = computePass.addTask(halfStep.shader, numGroups = configRepo.numGroups).apply {
                     onBeforeDispatch {
+                        halfStep.countWallCollisionsEnabled = if (buffers.countWallCollisions) 1 else 0
                         configRepo.whenDirty {
                             halfStep.dT = simulation.dT.toFloat()
                             numGroups.set(configRepo.numGroups)

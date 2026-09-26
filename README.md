@@ -39,5 +39,7 @@ Check the [installation docs](https://particles.dvyy.me/docs/installation.html) 
 ### Developers
 
 - Clone this repository
-- Run JVM target with `./gradlew run` (or `gradlew.bat run` on Windows)
-- Run JS target with `gradle :particles-demo:jsRun`
+- Get JDK >=21
+- Run the JVM target with `./gradlew :particles-demo:jvmRun` (or `gradlew.bat :particles-demo:jvmRun` on Windows)
+- Run the JS target with `./gradlew :particles-demo:jsBrowserDevelopmentRun` (or `gradlew.bat :particles-demo:jsBrowserDevelopmentRun` on Windows)
+- If Vulkan fails on your hardware, use OpenGL with `gradlew.bat :particles-demo:jvmRun --args="--opengl"` on Windows

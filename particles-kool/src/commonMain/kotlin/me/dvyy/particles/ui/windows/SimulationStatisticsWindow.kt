@@ -3,6 +3,7 @@ package me.dvyy.particles.ui.windows
 import de.fabmax.kool.modules.ui2.*
 import de.fabmax.kool.toString
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.update
 import me.dvyy.particles.clustering.ParticleClustering
 import me.dvyy.particles.config.AppSettings
@@ -33,6 +34,9 @@ class SimulationStatisticsWindow(
     val fps = mutableStateOf(0.0)
     val clusterOptions = settings.clusterOptions.asMutableState(scope)
     val meanSquareVelocity = viewModel.meanSquareVelocity.asMutableState(scope)
+    val isMeasuringWallCollisions = viewModel.isMeasuringWallCollisions.asMutableState(scope)
+    val wallCollisionCount = viewModel.wallCollisionCount.asMutableState(scope)
+    val wallCollisionRate = viewModel.wallCollisionRate.asMutableState(scope)
 
     override fun UiScope.windowContent() = ScrollArea(
         withHorizontalScrollbar = false,
@@ -40,13 +44,25 @@ class SimulationStatisticsWindow(
         containerModifier = { it.background(null) }
     ) {
         modifier.width(Grow.Std)
+        var collisionRefreshFrames by remember(0)
         surface.onEachFrame {
             fps.set(it.fps)
             simsPs.set(it.fps * viewModel.passesPerFrame.value)
+            collisionRefreshFrames++
+            if (viewModel.isMeasuringWallCollisions.value && collisionRefreshFrames % 30 == 0) {
+                scope.launch { viewModel.refreshWallCollisionMeasurement() }
+            }
         }
         Column(Grow.Std, Grow.Std) {
             Category("Stats") {
                 Text("Simulation speed: ${simsPs.use().toString(2)} sims/s") {}
+                Subcategory("Wall Collisions") {
+                    Text("Collisions: ${wallCollisionCount.use()}") {}
+                    Text("Rate: ${wallCollisionRate.use().toString(2)} collisions/s") {}
+                    Button(if (isMeasuringWallCollisions.use()) "Stop" else "Start") {
+                        modifier.onClick { viewModel.toggleWallCollisionMeasurement() }
+                    }
+                }
             }
 
             Category("Graphs") {

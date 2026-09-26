@@ -26,6 +26,9 @@ class ParticleBuffers(
     val colorsBuffer = StorageBuffer(GpuType.Float4, count)
 
     val particleTypesBuffer = Buffers.integers(count)
+    val wallCollisionCountBuffer = Buffers.integers(1)
+    val wallContactStatesBuffer = Buffers.integers(count)
+    var countWallCollisions = false
 
     /** Integer id for the particle's current cluster, or max value if an outlier. */
     val clustersBuffer = Buffers.integers(count)
@@ -78,6 +81,8 @@ class ParticleBuffers(
         offsetsBuffer.release()
         colorsBuffer.release()
         particleTypesBuffer.release()
+        wallCollisionCountBuffer.release()
+        wallContactStatesBuffer.release()
         particleColors.release()
         particleRadii.release()
     }
